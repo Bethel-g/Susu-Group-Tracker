@@ -85,6 +85,22 @@ class MemberBalance:
     balance: Decimal
 
 
+@dataclass(frozen=True)
+class GroupReport:
+    """A snapshot of the group's financial state for display."""
+
+    weekly_contribution: Decimal
+    currency: str
+    current_week: int
+    current_week_status: WeekStatus
+    rotation_status: str
+    is_complete: bool
+    pot: Decimal
+    next_recipient_name: str | None
+    members: list[MemberBalance]
+    payout_history: list[Payout]
+
+
 class SusuGroup:
     """A rotating savings group ("susu") with a fixed weekly contribution."""
 

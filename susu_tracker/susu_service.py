@@ -8,7 +8,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from .exceptions import GroupAlreadyExistsError
-from .models import Contribution, Member, MemberBalance, Payout, SusuGroup
+from .models import Contribution, GroupReport, Member, MemberBalance, Payout, SusuGroup
 from .repository import InMemoryRepository
 
 
@@ -58,3 +58,21 @@ class SusuService:
 
     def get_payout_history(self) -> list[Payout]:
         return list(self.get_group().payouts)
+
+    # -- reporting ---------------------------------------------------------
+
+    def get_report(self) -> GroupReport:
+        group = self.get_group()
+        recipient = group.next_recipient
+        return GroupReport(
+            weekly_contribution=group.weekly_contribution,
+            currency=group.currency,
+            current_week=group.current_week,
+            current_week_status=group.get_week(group.current_week).status,
+            rotation_status=group.rotation_status,
+            is_complete=group.is_complete,
+            pot=group.pot,
+            next_recipient_name=recipient.name if recipient else None,
+            members=group.week_balances(group.current_week),
+            payout_history=list(group.payouts),
+        )
