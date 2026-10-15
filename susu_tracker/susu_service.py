@@ -8,7 +8,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from .exceptions import GroupAlreadyExistsError
-from .models import Member, SusuGroup
+from .models import Contribution, Member, MemberBalance, SusuGroup
 from .repository import InMemoryRepository
 
 
@@ -39,3 +39,14 @@ class SusuService:
 
     def add_member(self, member_id: str, name: str) -> Member:
         return self.get_group().add_member(member_id, name)
+
+    # -- contributions --------------------------------------------------
+
+    def record_contribution(self, member_id: str, amount: Decimal | str | int) -> Contribution:
+        return self.get_group().record_contribution(member_id, amount)
+
+    def get_member_balance(self, member_id: str, week_number: int) -> Decimal:
+        return self.get_group().outstanding_balance(member_id, week_number)
+
+    def get_week_status(self, week_number: int) -> list[MemberBalance]:
+        return self.get_group().week_balances(week_number)

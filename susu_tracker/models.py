@@ -8,14 +8,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from enum import Enum
 
 from .exceptions import (
     DuplicateMemberError,
     InvalidMemberError,
     MembershipFrozenError,
+    OverpaymentError,
+    RotationCompleteError,
     UnknownMemberError,
+    UnknownWeekError,
+    WeekClosedError,
 )
-from .money import as_money, ensure_positive
+from .money import as_money, ensure_positive, format_money
+
+ZERO = Decimal("0.00")
+
+
+class WeekStatus(Enum):
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
 
 
 @dataclass(frozen=True)
@@ -27,6 +39,37 @@ class Member:
     join_order: int
 
 
+@dataclass(frozen=True)
+class Contribution:
+    """One payment made by a member toward one week.
+
+    Partial payments are stored as separate records rather than overwriting
+    the previous amount, which keeps the payment history transparent.
+    """
+
+    member_id: str
+    week_number: int
+    amount: Decimal
+
+
+@dataclass
+class Week:
+    """A saving week, open for contributions until it is closed."""
+
+    number: int
+    status: WeekStatus = WeekStatus.OPEN
+
+
+@dataclass(frozen=True)
+class MemberBalance:
+    """How much one member has paid and still owes for a week."""
+
+    member_id: str
+    name: str
+    paid: Decimal
+    balance: Decimal
+
+
 class SusuGroup:
     """A rotating savings group ("susu") with a fixed weekly contribution."""
 
@@ -36,6 +79,8 @@ class SusuGroup:
         )
         self.currency = "GHS"
         self.members: list[Member] = []
+        self.contributions: list[Contribution] = []
+        self.weeks: dict[int, Week] = {1: Week(1)}
         self.current_week: int = 1
         self.next_recipient_index: int = 0
         self.is_complete: bool = False
@@ -45,7 +90,7 @@ class SusuGroup:
     @property
     def membership_frozen(self) -> bool:
         """Members may not be added once any contribution is recorded."""
-        return False  # overridden once contribution tracking exists
+        return bool(self.contributions)
 
     @staticmethod
     def _key(text: object) -> str:
@@ -84,3 +129,82 @@ class SusuGroup:
         )
         self.members.append(member)
         return member
+
+    # -- weeks ---------------------------------------------------------
+
+    def get_week(self, week_number: int) -> Week:
+        try:
+            return self.weeks[week_number]
+        except KeyError:
+            raise UnknownWeekError(f"Week {week_number} does not exist.") from None
+
+    # -- contributions --------------------------------------------------
+
+    def paid_amount(self, member_id: str, week_number: int) -> Decimal:
+        """Total already paid by one member for one week."""
+        self.get_week(week_number)
+        member = self.get_member(member_id)
+        total = ZERO
+        for contribution in self.contributions:
+            if (
+                contribution.member_id == member.member_id
+                and contribution.week_number == week_number
+            ):
+                total += contribution.amount
+        return total
+
+    def outstanding_balance(self, member_id: str, week_number: int) -> Decimal:
+        """What the member still owes for the week; never negative."""
+        balance = self.weekly_contribution - self.paid_amount(member_id, week_number)
+        return balance if balance > 0 else ZERO
+
+    def week_balances(self, week_number: int) -> list[MemberBalance]:
+        """Payment status of every member for one week."""
+        self.get_week(week_number)
+        paid_by_member: dict[str, Decimal] = {}
+        for contribution in self.contributions:
+            if contribution.week_number == week_number:
+                paid_by_member[contribution.member_id] = (
+                    paid_by_member.get(contribution.member_id, ZERO) + contribution.amount
+                )
+
+        balances = []
+        for member in self.members:
+            paid = paid_by_member.get(member.member_id, ZERO)
+            owed = self.weekly_contribution - paid
+            balances.append(
+                MemberBalance(
+                    member_id=member.member_id,
+                    name=member.name,
+                    paid=paid,
+                    balance=owed if owed > 0 else ZERO,
+                )
+            )
+        return balances
+
+    def record_contribution(self, member_id: str, amount: Decimal | str | int) -> Contribution:
+        """Record a full or partial payment against the current open week."""
+        if self.is_complete:
+            raise RotationCompleteError(
+                "The rotation is complete, so no more contributions can be recorded."
+            )
+        week = self.get_week(self.current_week)
+        if week.status is not WeekStatus.OPEN:  # defensive: current week is always open here
+            raise WeekClosedError(f"Week {week.number} is already closed.")
+
+        money = ensure_positive(as_money(amount), "Contribution amount")
+        member = self.get_member(member_id)
+        balance = self.outstanding_balance(member.member_id, week.number)
+        if money > balance:
+            raise OverpaymentError(
+                f"Cannot record {format_money(money)}: only {format_money(balance)} "
+                f"remains due for {member.name} in week {week.number}."
+            )
+
+        contribution = Contribution(
+            member_id=member.member_id,
+            week_number=week.number,
+            amount=money,
+        )
+        self.contributions.append(contribution)
+        return contribution
