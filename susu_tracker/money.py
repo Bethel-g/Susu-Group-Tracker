@@ -27,34 +27,39 @@ def as_money(value: object) -> Decimal:
     shortest round-trip representation, so values that lost precision
     (e.g. 0.1 + 0.2) are rejected instead of silently rounded.
     """
+    if isinstance(value, bool):
+        # bool is an int subclass; accepting True as 1.00 would be a surprise.
+        raise InvalidAmountError(f"{value!r} is not a valid money amount.")
     if isinstance(value, Decimal):
-        text = str(value)
+        amount = value
     elif isinstance(value, int):
-        text = str(value)
+        amount = Decimal(value)
     elif isinstance(value, float):
-        text = repr(value)
+        amount = _decimal_from_text(repr(value))
     elif isinstance(value, str):
-        text = value.strip()
+        amount = _decimal_from_text(value.strip())
     else:
         raise InvalidAmountError(f"{value!r} is not a valid money amount.")
 
+    if not amount.is_finite():
+        raise InvalidAmountError(f"'{amount}' is not a valid money amount.")
+    if amount % PLACE != 0:
+        raise InvalidAmountError(f"'{amount}' has more than two decimal places.")
+    try:
+        return amount.quantize(PLACE, rounding=ROUND_HALF_UP)
+    except InvalidOperation as exc:
+        raise InvalidAmountError(f"'{amount}' is not a valid money amount.") from exc
+
+
+def _decimal_from_text(text: str) -> Decimal:
+    """Parse money written as text, rejecting anything malformed."""
     if not _MONEY_PATTERN.match(text):
         raise InvalidAmountError(
             f"'{text}' is not a valid money amount (use e.g. 50 or 50.25)."
         )
-
     try:
-        amount = Decimal(text)
-    except InvalidOperation as exc:  # defensive: pattern should prevent this
-        raise InvalidAmountError(f"'{text}' is not a valid money amount.") from exc
-
-    if not amount.is_finite():
-        raise InvalidAmountError(f"'{text}' is not a valid money amount.")
-    if amount % PLACE != 0:
-        raise InvalidAmountError(f"'{text}' has more than two decimal places.")
-    try:
-        return amount.quantize(PLACE, rounding=ROUND_HALF_UP)
-    except InvalidOperation as exc:
+        return Decimal(text)
+    except InvalidOperation as exc:  # defensive: the pattern should prevent this
         raise InvalidAmountError(f"'{text}' is not a valid money amount.") from exc
 
 
