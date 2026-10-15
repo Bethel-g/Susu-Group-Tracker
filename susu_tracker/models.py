@@ -12,8 +12,10 @@ from enum import Enum
 
 from .exceptions import (
     DuplicateMemberError,
+    IncompleteWeekError,
     InvalidMemberError,
     MembershipFrozenError,
+    NoMembersError,
     OverpaymentError,
     RotationCompleteError,
     UnknownMemberError,
@@ -52,12 +54,25 @@ class Contribution:
     amount: Decimal
 
 
+@dataclass(frozen=True)
+class Payout:
+    """The whole weekly pot paid to one member."""
+
+    week_number: int
+    recipient_id: str
+    amount: Decimal
+
+
 @dataclass
 class Week:
-    """A saving week, open for contributions until it is closed."""
+    """A saving week, open for contributions until it is closed.
+
+    A closed week always has a payout attached.
+    """
 
     number: int
     status: WeekStatus = WeekStatus.OPEN
+    payout: Payout | None = None
 
 
 @dataclass(frozen=True)
@@ -80,6 +95,7 @@ class SusuGroup:
         self.currency = "GHS"
         self.members: list[Member] = []
         self.contributions: list[Contribution] = []
+        self.payouts: list[Payout] = []
         self.weeks: dict[int, Week] = {1: Week(1)}
         self.current_week: int = 1
         self.next_recipient_index: int = 0
@@ -208,3 +224,70 @@ class SusuGroup:
         )
         self.contributions.append(contribution)
         return contribution
+
+    # -- closure and payouts --------------------------------------------
+
+    @property
+    def pot(self) -> Decimal:
+        """The weekly pot: weekly contribution times the number of members."""
+        return self.weekly_contribution * len(self.members)
+
+    @property
+    def next_recipient(self) -> Member | None:
+        """The member who will be paid when the current week closes."""
+        if self.is_complete or not self.members:
+            return None
+        return self.members[self.next_recipient_index]
+
+    @property
+    def rotation_status(self) -> str:
+        return "Complete" if self.is_complete else "Active"
+
+    def close_week(self) -> Payout:
+        """Validate the current week and pay the pot to the next recipient.
+
+        Validation happens before any state changes, so a rejected closure
+        leaves the group exactly as it was.
+        """
+        # Phase 1: validate. Nothing is mutated before every check passes.
+        if self.is_complete:
+            raise RotationCompleteError(
+                "The rotation is already complete; no further payouts can be made."
+            )
+        if not self.members:
+            raise NoMembersError(
+                "Cannot close a week before any members are registered."
+            )
+        week = self.get_week(self.current_week)
+        if week.status is not WeekStatus.OPEN:  # defensive: current week is always open here
+            raise WeekClosedError(f"Week {week.number} is already closed.")
+
+        outstanding = [
+            balance for balance in self.week_balances(week.number) if balance.balance > 0
+        ]
+        if outstanding:
+            raise IncompleteWeekError(
+                f"Week {week.number} cannot be closed because members still owe money.",
+                outstanding,
+            )
+
+        # Phase 2: apply. Every check passed, so this block always completes.
+        recipient = self.members[self.next_recipient_index]
+        payout = Payout(
+            week_number=week.number,
+            recipient_id=recipient.member_id,
+            amount=self.pot,
+        )
+        week.status = WeekStatus.CLOSED
+        week.payout = payout
+        self.payouts.append(payout)
+
+        if len(self.payouts) >= len(self.members):
+            # Every member has received exactly one payout.
+            self.is_complete = True
+        else:
+            self.next_recipient_index += 1
+            self.current_week += 1
+            self.weeks[self.current_week] = Week(self.current_week)
+
+        return payout

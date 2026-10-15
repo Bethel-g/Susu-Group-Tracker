@@ -8,7 +8,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from .exceptions import GroupAlreadyExistsError
-from .models import Contribution, Member, MemberBalance, SusuGroup
+from .models import Contribution, Member, MemberBalance, Payout, SusuGroup
 from .repository import InMemoryRepository
 
 
@@ -50,3 +50,11 @@ class SusuService:
 
     def get_week_status(self, week_number: int) -> list[MemberBalance]:
         return self.get_group().week_balances(week_number)
+
+    # -- week closure -----------------------------------------------------
+
+    def close_week(self) -> Payout:
+        return self.get_group().close_week()
+
+    def get_payout_history(self) -> list[Payout]:
+        return list(self.get_group().payouts)
