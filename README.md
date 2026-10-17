@@ -14,6 +14,7 @@ engineer to read and test.
 
 ## Table of contents
 
+- [Quick start](#quick-start)
 - [Overview](#overview)
 - [Features](#features)
 - [Requirements](#requirements)
@@ -24,6 +25,22 @@ engineer to read and test.
 - [Testing](#testing)
 - [Project structure](#project-structure)
 - [Design notes](#design-notes)
+
+## Quick start
+
+From a fresh clone, with no third-party runtime dependencies:
+
+```bash
+git clone <repository-url>
+cd susu-group-tracker
+python -m pip install -r requirements.txt   # installs pytest for the tests
+
+python -m susu_tracker.cli                  # run the application
+python -m pytest -v                         # run the test suite
+```
+
+See [Installation](#installation) for virtual-environment setup and
+[Example session](#example-session) for a full walkthrough.
 
 ## Overview
 
@@ -254,6 +271,7 @@ That keeps the rules testable without the CLI.
 
 ## Design notes
 
-Assumptions, design decisions, and future improvements are recorded in
-[NOTES.md](NOTES.md), including membership freezing, partial payments,
-payout order, money handling, and the in-memory persistence choice.
+Assumptions, design decisions, current limitations, and future improvements
+are recorded in [NOTES.md](NOTES.md), including why Python and `Decimal` are
+used, membership freezing, partial payments, payout order, and the in-memory
+persistence choice.

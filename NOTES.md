@@ -3,6 +3,28 @@
 This document records the decisions taken where the assignment leaves room for
 interpretation, plus the reasoning behind them.
 
+## Why Python, and the data structures used
+
+Python was chosen because the standard library is enough for this problem
+(`decimal`, `dataclasses`, `enum`, `re`), so the application runs with no
+third-party runtime dependencies and is easy to test with pytest. The work is
+business logic rather than performance or I/O, so a readable language keeps the
+rules short and obvious without hiding anything behind a framework.
+
+The main data structures are:
+
+- **`dataclass` records** for immutable values: `Member`, `Contribution`,
+  `Payout`, and `MemberBalance`. They give equality and readable construction
+  for free, which keeps the tests short.
+- **`list`s kept in joining or chronological order**: `members`, `contributions`,
+  and `payouts`. Order *is* the payout schedule, so a list (rather than a set or
+  a dict) is the natural container and keeps the history easy to display.
+- **A `dict[int, Week]`** mapping a week number to its `Week`, so a week's
+  status and payout are looked up directly.
+- **`decimal.Decimal`** for every amount; `float` is never used for money.
+- **A single `SusuGroup` reference** held by `InMemoryRepository`, isolated in
+  its own module so a database could replace it later.
+
 ## Assumptions and design decisions
 
 ### 1. Membership
@@ -89,6 +111,28 @@ CLI, application, and domain layers. Splitting it later would be mechanical.
 
 The report is a read-only snapshot (`GroupReport`) built from the domain's
 balance calculations; it performs no calculations of its own.
+
+### 12. One group at a time
+
+The application manages a single savings group. Creating a second group is
+rejected with `GroupAlreadyExistsError` rather than silently overwriting the
+existing one, and there is no group identifier because only one can exist at a
+time. The repository holds at most one `SusuGroup` reference.
+
+## Current limitations
+
+- **One group only.** There is no way to name, create, or switch between
+  several savings groups in one session.
+- **No persistence.** Data lives in memory, so exiting the program loses the
+  group, its contributions, and its payouts.
+- **Membership is frozen after the first contribution.** A latecomer cannot be
+  added, and members cannot be removed if someone leaves.
+- **One full rotation only.** Payouts always follow joining order and each
+  member is paid exactly once; the rotation does not restart automatically.
+- **No reversal or audit trail.** A wrongly recorded payment cannot be undone
+  through the interface.
+- **No authentication.** The CLI trusts whoever runs it, and all output is
+  plain text with no export.
 
 ## Future improvements
 
