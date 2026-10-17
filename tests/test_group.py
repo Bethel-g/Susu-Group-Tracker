@@ -58,11 +58,12 @@ def test_duplicate_member_id_is_rejected(group_50: SusuService):
     assert len(group_50.get_group().members) == 1
 
 
-def test_duplicate_member_name_is_rejected(group_50: SusuService):
+def test_members_may_share_a_name(group_50: SusuService):
     group_50.add_member("M1", "Ama")
-    with pytest.raises(DuplicateMemberError):
-        group_50.add_member("M2", "  ama ")
-    assert len(group_50.get_group().members) == 1
+    group_50.add_member("M2", "  ama ")
+    members = group_50.get_group().members
+    assert [member.member_id for member in members] == ["M1", "M2"]
+    assert [member.name for member in members] == ["Ama", "ama"]
 
 
 @pytest.mark.parametrize("member_id,name", [("", "Ama"), ("   ", "Ama"), ("M1", ""), ("M1", "   ")])

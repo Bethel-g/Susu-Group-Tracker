@@ -35,7 +35,7 @@ balances, and payouts accurate, transparent, and easy to verify.
 ## Features
 
 - Create a group with a fixed weekly contribution in GHS (FR-01).
-- Register members with unique IDs and names, in registration order (FR-02).
+- Register members with a unique ID and a name, in registration order (FR-02).
 - Record full or partial contributions against the current week (FR-03).
 - Reject unknown members, invalid amounts, duplicates, and overpayments (FR-04).
 - Close a week only when every member has paid in full (FR-05).
@@ -167,8 +167,8 @@ Next recipient for week 2: Kofi (M2).
 ## Business rules
 
 1. The weekly contribution must be greater than zero.
-2. Member IDs and names must each be unique, compared case-insensitively
-   after trimming surrounding whitespace.
+2. Member IDs must be unique, compared case-insensitively after trimming
+   surrounding whitespace. Names are display labels and may be repeated.
 3. Members are paid in registration order, once per rotation.
 4. Membership is frozen once the first contribution is recorded.
 5. Each contribution must be greater than zero and may not exceed the

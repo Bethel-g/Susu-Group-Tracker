@@ -34,7 +34,7 @@ class WeekStatus(Enum):
 
 @dataclass(frozen=True)
 class Member:
-    """A registered group member, identified by a unique ID and name."""
+    """A registered group member, identified by a unique ID and a display name."""
 
     member_id: str
     name: str
@@ -147,12 +147,9 @@ class SusuGroup:
             raise InvalidMemberError("Both a member ID and a name are required.")
 
         id_key = self._key(member_id_text)
-        name_key = self._key(name_text)
         for existing in self.members:
             if self._key(existing.member_id) == id_key:
                 raise DuplicateMemberError(f"Member ID '{member_id_text}' is already registered.")
-            if self._key(existing.name) == name_key:
-                raise DuplicateMemberError(f"Member name '{name_text}' is already registered.")
 
         member = Member(
             member_id=member_id_text,
@@ -161,6 +158,13 @@ class SusuGroup:
         )
         self.members.append(member)
         return member
+
+    def list_members(self) -> list[Member]:
+        """Return the registered members in joining order.
+
+        The result is a copy, so callers cannot change group state by mutating it.
+        """
+        return list(self.members)
 
     # -- weeks ---------------------------------------------------------
 

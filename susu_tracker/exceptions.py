@@ -25,7 +25,7 @@ class InvalidMemberError(SusuError):
 
 
 class DuplicateMemberError(SusuError):
-    """A member with the same ID or name is already registered."""
+    """A member with the same ID is already registered."""
 
 
 class MembershipFrozenError(SusuError):

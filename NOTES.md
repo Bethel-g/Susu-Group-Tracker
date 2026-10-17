@@ -14,9 +14,10 @@ freely.
 
 ### 2. Uniqueness rule
 
-Member IDs and member names must each be unique. Comparison is case-insensitive
-after trimming surrounding whitespace, so `m1`, `M1`, and ` M1 ` are the same
-ID, and `Ama` and ` ama ` are the same name.
+Member IDs must be unique. Comparison is case-insensitive after trimming
+surrounding whitespace, so `m1`, `M1`, and ` M1 ` are the same ID. Names are
+display labels only and may be repeated, so two members can both be called
+`Ama` as long as their IDs differ.
 
 ### 3. Partial payments
 
