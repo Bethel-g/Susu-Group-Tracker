@@ -208,6 +208,10 @@ python -m pytest -v
 | T-14 | Failed close reports every unpaid member | `test_contributions_and_payouts.py::test_close_reports_every_unpaid_member` |
 | T-15 | Failed closures are absent from payout history | `test_contributions_and_payouts.py::test_report_omits_failed_closures` |
 | T-16 | Spec example: partial payments then closure | `test_contributions_and_payouts.py::test_spec_example_contributions_then_closure` |
+| T-17 | Failed registration keeps list and joining order | `test_susu.py::test_failed_registrations_do_not_change_the_member_list_or_order` |
+| T-18 | Money stays exact Decimal | `test_susu.py::test_money_stays_exact_decimal` |
+| T-19 | Second payout follows joining order | `test_susu.py::test_second_payout_follows_joining_order` |
+| T-20 | Zero / negative payments rejected | `test_susu.py::test_zero_and_negative_payments_are_rejected` |
 
 ## Project structure
 
