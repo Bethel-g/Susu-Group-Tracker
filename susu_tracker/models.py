@@ -176,8 +176,13 @@ class SusuGroup:
 
     # -- contributions --------------------------------------------------
 
-    def paid_amount(self, member_id: str, week_number: int) -> Decimal:
-        """Total already paid by one member for one week."""
+    def get_member_paid(self, member_id: str, week_number: int | None = None) -> Decimal:
+        """Total already paid by one member for one week.
+
+        When *week_number* is omitted the current week is used.
+        """
+        if week_number is None:
+            week_number = self.current_week
         self.get_week(week_number)
         member = self.get_member(member_id)
         total = ZERO
@@ -189,9 +194,15 @@ class SusuGroup:
                 total += contribution.amount
         return total
 
-    def outstanding_balance(self, member_id: str, week_number: int) -> Decimal:
-        """What the member still owes for the week; never negative."""
-        balance = self.weekly_contribution - self.paid_amount(member_id, week_number)
+    def get_member_balance(self, member_id: str, week_number: int | None = None) -> Decimal:
+        """What the member still owes for one week; never negative.
+
+        Outstanding = weekly contribution - total paid. When *week_number* is
+        omitted the current week is used.
+        """
+        if week_number is None:
+            week_number = self.current_week
+        balance = self.weekly_contribution - self.get_member_paid(member_id, week_number)
         return balance if balance > 0 else ZERO
 
     def week_balances(self, week_number: int) -> list[MemberBalance]:
@@ -230,7 +241,7 @@ class SusuGroup:
 
         money = ensure_positive(as_money(amount), "Contribution amount")
         member = self.get_member(member_id)
-        balance = self.outstanding_balance(member.member_id, week.number)
+        balance = self.get_member_balance(member.member_id, week.number)
         if money > balance:
             raise OverpaymentError(
                 f"Cannot record {format_money(money)}: only {format_money(balance)} "

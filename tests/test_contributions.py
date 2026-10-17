@@ -27,7 +27,7 @@ def test_partial_payment_reduces_the_outstanding_balance(three_members: SusuServ
 def test_multiple_partial_payments_are_summed(three_members: SusuService):
     for amount in ("10.00", "15.00", "25.00"):
         three_members.record_contribution("M1", amount)
-    assert three_members.get_group().paid_amount("M1", 1) == Decimal("50.00")
+    assert three_members.get_member_paid("M1", 1) == Decimal("50.00")
     assert three_members.get_member_balance("M1", 1) == Decimal("0.00")
 
 
@@ -91,3 +91,9 @@ def test_week_status_lists_every_member(three_members: SusuService):
         ("Kofi", Decimal("0.00"), Decimal("50.00")),
         ("Esi", Decimal("30.00"), Decimal("20.00")),
     ]
+
+
+def test_paid_and_balance_default_to_the_current_week(three_members: SusuService):
+    three_members.record_contribution("M1", "30.00")
+    assert three_members.get_member_paid("M1") == Decimal("30.00")
+    assert three_members.get_member_balance("M1") == Decimal("20.00")

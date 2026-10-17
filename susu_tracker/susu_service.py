@@ -13,7 +13,7 @@ from .repository import InMemoryRepository
 
 
 class SusuService:
-    """Coordinates group creation, membership, and (later) week operations."""
+    """Coordinates group creation, membership, contributions, and week closure."""
 
     def __init__(self, repository: InMemoryRepository | None = None) -> None:
         self.repository = repository if repository is not None else InMemoryRepository()
@@ -45,8 +45,13 @@ class SusuService:
     def record_contribution(self, member_id: str, amount: Decimal | str | int) -> Contribution:
         return self.get_group().record_contribution(member_id, amount)
 
-    def get_member_balance(self, member_id: str, week_number: int) -> Decimal:
-        return self.get_group().outstanding_balance(member_id, week_number)
+    def get_member_paid(self, member_id: str, week_number: int | None = None) -> Decimal:
+        """Total paid by a member for one week (defaults to the current week)."""
+        return self.get_group().get_member_paid(member_id, week_number)
+
+    def get_member_balance(self, member_id: str, week_number: int | None = None) -> Decimal:
+        """Outstanding balance for a member (defaults to the current week)."""
+        return self.get_group().get_member_balance(member_id, week_number)
 
     def get_week_status(self, week_number: int) -> list[MemberBalance]:
         return self.get_group().week_balances(week_number)

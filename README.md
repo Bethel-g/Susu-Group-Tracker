@@ -204,6 +204,10 @@ python -m pytest -v
 | T-10 | Complete the rotation | `test_week_closure.py::test_full_rotation_pays_every_member_in_registration_order` |
 | T-11 | Freeze membership after first payment | `test_group.py::test_membership_freezes_after_first_contribution` |
 | T-12 | Report shows balances and payouts | `test_reports.py::test_report_shows_payout_history_after_closure` |
+| T-13 | Contributions tracked per week | `test_contributions_and_payouts.py::test_contributions_are_tracked_per_week` |
+| T-14 | Failed close reports every unpaid member | `test_contributions_and_payouts.py::test_close_reports_every_unpaid_member` |
+| T-15 | Failed closures are absent from payout history | `test_contributions_and_payouts.py::test_report_omits_failed_closures` |
+| T-16 | Spec example: partial payments then closure | `test_contributions_and_payouts.py::test_spec_example_contributions_then_closure` |
 
 ## Project structure
 
@@ -221,7 +225,9 @@ susu-group-tracker/
 │   ├── conftest.py
 │   ├── test_money.py
 │   ├── test_group.py
+│   ├── test_susu.py
 │   ├── test_contributions.py
+│   ├── test_contributions_and_payouts.py
 │   ├── test_week_closure.py
 │   ├── test_reports.py
 │   └── test_cli.py
